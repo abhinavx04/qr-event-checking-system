@@ -4,9 +4,11 @@ import { User } from '../models/user.model';
 
 interface IDecodedToken {
   id: string;
-  role: string;
+  iat: number;
+  exp: number;
 }
 
+// Extend Express Request type to include user
 declare global {
   namespace Express {
     interface Request {
@@ -15,29 +17,50 @@ declare global {
   }
 }
 
-export const protect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const protect = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Your authentication logic here
-    
-    // If authentication successful, call next()
-    next();
-  } catch (error) {
-    // Handle error by sending response
-    res.status(401).json({ 
-      success: false, 
-      message: 'Not authorized' 
-    });
-  }
-};
+    let token: string | undefined;
 
-export const authorize = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
+    // Check if token exists in headers
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    // If token doesn't exist, return error
+    if (!token) {
+      return res.status(401).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`,
+        message: 'Not authorized to access this route'
       });
     }
-    next();
-  };
+
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as IDecodedToken;
+
+      // Get user from database
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Attach user to request object
+      req.user = user;
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized to access this route'
+      });
+    }
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: 'Error in auth middleware'
+    });
+  }
 };

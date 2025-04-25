@@ -119,25 +119,34 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.user.id);
+    // User is already attached to req by the protect middleware
+    const user = req.user;
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
 
     res.status(200).json({
       success: true,
       data: {
         user: {
-          id: user!._id,
-          name: user!.name,
-          email: user!.email,
-          studentId: user!.studentId,
-          role: user!.role,
-          createdAt: user!.createdAt
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          studentId: user.studentId,
+          role: user.role,
+          createdAt: user.createdAt
         }
       }
     });
   } catch (error: any) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Error retrieving user data'
     });
   }
 };

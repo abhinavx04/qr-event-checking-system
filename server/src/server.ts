@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import path from 'path';
 import authRoutes from './routes/auth.routes';
 import eventRoutes from './routes/event.routes';
+import qrRoutes from './routes/qr.routes';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -40,6 +41,7 @@ connectDB();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/qr', qrRoutes);
 
 // Basic route for testing
 app.get('/', (req, res) => {

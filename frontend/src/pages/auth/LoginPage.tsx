@@ -1,34 +1,43 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from "../utils/axiose"
+import { authAPI } from '../../services/api';
+import { LoginCredentials } from '../../types';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    identifier: '',
+  const [formData, setFormData] = useState<LoginCredentials>({
+    email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const response = await axios.post('/auth/login', {
-        email: formData.identifier,
+      const response = await authAPI.login({
+        email: formData.email,
         password: formData.password
       });
 
-      if (response.data.success && response.data.token) {
+      if (response.data.token) {
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         navigate('/');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -47,7 +56,7 @@ const LoginPage = () => {
             <h1 className="text-4xl font-bold tracking-tight text-gray-100">EventSphere</h1>
           </div>
           <p className="text-xl text-gray-400 max-w-sm">
-            Your gateway to campus events. Connect, participate, and engage.
+            Welcome back! Sign in to manage your events.
           </p>
         </div>
       </div>
@@ -56,8 +65,8 @@ const LoginPage = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-100">Welcome Back</h2>
-            <p className="mt-2 text-gray-400">Sign in to your account</p>
+            <h2 className="text-3xl font-bold text-gray-100">Sign In</h2>
+            <p className="mt-2 text-gray-400">Welcome back to EventSphere</p>
           </div>
 
           {error && (
@@ -70,15 +79,17 @@ const LoginPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email or Student ID
+                  Email
                 </label>
                 <input
-                  type="text"
+                  id="email"
+                  name="email"
+                  type="email"
                   required
-                  value={formData.identifier}
-                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                  value={formData.email}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-                  placeholder="Enter your email or student ID"
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -87,12 +98,14 @@ const LoginPage = () => {
                   Password
                 </label>
                 <input
+                  id="password"
+                  name="password"
                   type="password"
                   required
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                 />
               </div>
             </div>
@@ -111,14 +124,14 @@ const LoginPage = () => {
                   <span>Signing in...</span>
                 </>
               ) : (
-                'Sign in'
+                'Sign In'
               )}
             </button>
 
             <p className="text-center text-gray-400">
               Don't have an account?{' '}
               <Link to="/register" className="text-blue-500 hover:text-blue-400 font-medium transition-colors duration-200">
-                Create one
+                Create Account
               </Link>
             </p>
           </form>

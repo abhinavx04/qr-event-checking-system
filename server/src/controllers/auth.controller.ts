@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import { User, UserRole } from '../models/user.model';
+import { User, UserRole, IUser } from '../models/user.model';
 
 const generateToken = (id: string): string => {
   return jwt.sign({ id }, process.env.JWT_SECRET!, {
@@ -18,10 +19,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       email: identifier,
       password,
       role,
-      ...(role === UserRole.STUDENT ? { studentId } : {})  // Only include studentId for students
+      ...(role === UserRole.STUDENT ? { studentId } : {})
     };
 
-    // Check if user exists
     const existingUser = await User.findOne({
       $or: [
         { email: identifier },
@@ -39,7 +39,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await User.create(userData);
+    const user = await User.create(userData) as IUser;
     const token = generateToken(user._id.toString());
 
     res.status(201).json({
@@ -84,7 +84,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         { email: identifier },
         { studentId: identifier }
       ]
-    }).select('+password');
+    }).select('+password') as IUser;
 
     if (!user) {
       res.status(401).json({
@@ -129,10 +129,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getMe = async (req: Request, res: Response): Promise<void> => {
+// Update getMe to use IUser type
+export const getMe: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // User is already attached to req by the protect middleware
-    const user = req.user;
+    const user = req.user as IUser;
 
     if (!user) {
       res.status(404).json({
@@ -142,7 +142,6 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Modified response to match the format
     res.status(200).json({
       success: true,
       data: {
@@ -157,9 +156,6 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error retrieving user data'
-    });
+    next(error);
   }
 };

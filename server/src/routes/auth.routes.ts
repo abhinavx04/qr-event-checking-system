@@ -10,5 +10,7 @@ router.post('/login', login);
 
 // Protected routes
 router.get('/me', protect, getMe);
+// Add verify endpoint that uses the existing getMe controller
+router.get('/verify', protect, getMe);
 
 export default router;

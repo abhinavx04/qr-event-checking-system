@@ -15,9 +15,18 @@ function App() {
   useEffect(() => {
     const verifyAuth = async () => {
       try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
         await authAPI.verifyToken();
       } catch (error) {
         console.error('Auth verification failed:', error);
+        // Clear authentication data on verification failure
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       } finally {
         setIsLoading(false);
       }

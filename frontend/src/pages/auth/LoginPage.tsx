@@ -18,17 +18,22 @@ const LoginPage = () => {
     setError('');
 
     try {
+      console.log('Attempting login with:', { identifier: formData.identifier });
       const response = await authAPI.login(formData);
-      const user = response.data.user;
       
-      // Redirect based on user role
-      if (user.role === UserRole.ADMIN) {
-        navigate('/admin/dashboard');
+      if (response.data?.token && response.data?.data?.user) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        
+        // Redirect based on user role
+        const user = response.data.data.user;
+        navigate(user.role === UserRole.ADMIN ? '/admin/dashboard' : '/dashboard');
       } else {
-        navigate('/dashboard');
+        throw new Error('Invalid response format');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

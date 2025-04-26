@@ -1,4 +1,4 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export enum UserRole {
@@ -6,7 +6,18 @@ export enum UserRole {
   ADMIN = 'admin'  // admin and organizer are the same
 }
 
-const userSchema = new mongoose.Schema<IUser>(
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  studentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
+const userSchema = new Schema<IUser>(
   {
     name: {
       type: String,
@@ -25,13 +36,19 @@ const userSchema = new mongoose.Schema<IUser>(
         'Please provide a valid email'
       ]
     },
+    password: {
+      type: String,
+      required: [true, 'Please provide a password'],
+      minlength: [6, 'Password must be at least 6 characters'],
+      select: false // Important: Don't include password by default in queries
+    },
     studentId: {
       type: String,
       required: function(this: any) {
         return this.role === UserRole.STUDENT;
       },
       unique: true,
-      sparse: true,  // allows null/undefined if not required
+      sparse: true,
       trim: true
     },
     role: {
@@ -41,7 +58,7 @@ const userSchema = new mongoose.Schema<IUser>(
     }
   },
   {
-    timestamps: true
+    timestamps: true // This adds createdAt and updatedAt fields
   }
 );
 
@@ -58,7 +75,12 @@ userSchema.pre('save', async function(next) {
 
 // Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    console.error('Password comparison error:', error);
+    return false;
+  }
 };
 
 export const User = mongoose.model<IUser>('User', userSchema);

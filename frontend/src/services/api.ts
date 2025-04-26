@@ -36,47 +36,71 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
-    try {
-      const response = await api.post<AuthResponse>('/auth/register', credentials);
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      }
-      return response.data;
-    } catch (error: any) {
-      throw error?.message || 'Registration failed';
-    }
-  },
-  
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
+      console.log('Sending login request:', { identifier: credentials.identifier });
       const response = await api.post<AuthResponse>('/auth/login', credentials);
+      
+      console.log('Login response:', response.data);
+      
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
       }
       return response.data;
     } catch (error: any) {
-      throw error?.message || 'Login failed';
+      console.error('Login API error:', error);
+      throw error.response?.data || error;
     }
   },
   
-  verifyToken: async (): Promise<AuthResponse> => {
+  register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.get<AuthResponse>('/auth/verify');
+      console.log('Sending registration request:', {
+        name: credentials.name,
+        email: credentials.email,
+        role: credentials.role
+      });
+      
+      const response = await api.post<AuthResponse>('/auth/register', credentials);
+      
+      console.log('Registration response:', response.data);
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
       return response.data;
-    } catch (error) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      throw error;
+    } catch (error: any) {
+      console.error('Registration API error:', error);
+      throw error.response?.data || error;
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+  verifyToken: async (): Promise<AuthResponse> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      console.log('Verifying token...');
+      const response = await api.get<AuthResponse>('/auth/me'); // Changed from /auth/verify to /auth/me
+      
+      console.log('Token verification response:', response.data);
+      
+      // Update local storage with fresh user data if needed
+      if (response.data?.data?.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Token verification error:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      throw error.response?.data || error;
+    }
   }
 };
 

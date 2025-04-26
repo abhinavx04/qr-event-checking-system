@@ -5,26 +5,34 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { StudentDashboard } from './pages/dashboard/StudentDashboard';
 import { AdminDashboard } from './pages/dashboard/AdminDashboard';
 import { User, UserRole } from './types';
+// Add new imports
+import { useEffect, useState } from 'react';
+import { authAPI } from './services/api';
 
 function App() {
-  const DashboardComponent = () => {
-    const userStr = localStorage.getItem('user');
-    console.log('Dashboard user string:', userStr);
+  const [isLoading, setIsLoading] = useState(true);
 
-    if (!userStr) {
-      console.log('No user found, redirecting to login');
-      return <Navigate to="/login" />;
-    }
+  useEffect(() => {
+    const verifyAuth = async () => {
+      try {
+        await authAPI.verifyToken();
+      } catch (error) {
+        console.error('Auth verification failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    try {
-      const user: User = JSON.parse(userStr);
-      console.log('User role:', user.role);
-      return user.role === UserRole.ADMIN ? <AdminDashboard /> : <StudentDashboard />;
-    } catch (error) {
-      console.error('Error parsing user:', error);
-      return <Navigate to="/login" />;
-    }
-  };
+    verifyAuth();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#121212]">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -35,14 +43,36 @@ function App() {
 
         {/* Protected Routes */}
         <Route
-          path="/dashboard"
+          path="/admin/*"
           element={
-            <ProtectedRoute>
-              <DashboardComponent />
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/dashboard/*"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.STUDENT]}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to={
+                localStorage.getItem('user')
+                  ? JSON.parse(localStorage.getItem('user') || '{}').role === UserRole.ADMIN
+                    ? '/admin'
+                    : '/dashboard'
+                  : '/login'
+              }
+              replace
+            />
+          }
+        />
       </Routes>
     </Router>
   );

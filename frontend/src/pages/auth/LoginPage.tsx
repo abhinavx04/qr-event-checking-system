@@ -1,93 +1,36 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
-import { LoginCredentials } from '../../types';
+import { LoginCredentials, UserRole } from '../../types';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginCredentials>({
-    identifier: '', // This can be email or studentId
+    identifier: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault(); // Prevent form submission reload
+    e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Pre-request validation
-      if (!formData.identifier || !formData.password) {
-        setError('Please fill in all fields');
-        return;
-      }
-
-      // Pre-request logging
-      console.log('=== Starting Login Process ===');
-      console.log('Form data:', {
-        identifier: formData.identifier,
-        passwordLength: formData.password.length
-      });
+      const response = await authAPI.login(formData);
+      const user = response.data.user;
       
-      // Making the API request
-      console.log('Making API request to:', import.meta.env.VITE_API_URL + '/auth/login');
-      const response = await authAPI.login({
-        identifier: formData.identifier,
-        password: formData.password
-      });
-
-      // Response logging
-      console.log('=== Response Received ===');
-      console.log('Status:', response.status);
-      console.log('Data:', response.data);
-
-      if (!response.data) {
-        throw new Error('No response data received');
-      }
-
-      // Success handling
-      if (response.data.success && response.data.token) {
-        console.log('=== Login Successful ===');
-        
-        // Store token
-        localStorage.setItem('token', response.data.token);
-        console.log('Token stored in localStorage');
-        
-        // Store user data
-        const userData = response.data.data?.user;
-        if (!userData) {
-          throw new Error('No user data received');
-        }
-        localStorage.setItem('user', JSON.stringify(userData));
-        console.log('User data stored:', userData);
-        
-        // Navigate to dashboard
-        console.log('Redirecting to dashboard...');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 100); // Small delay to ensure console logs are visible
+      // Redirect based on user role
+      if (user.role === UserRole.ADMIN) {
+        navigate('/admin/dashboard');
       } else {
-        throw new Error(response.data.message || 'Login failed');
+        navigate('/dashboard');
       }
     } catch (err: any) {
-      console.error('=== Login Error ===');
-      console.error('Error details:', {
-        name: err.name,
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data
-      });
-
-      setError(
-        err.response?.data?.message || 
-        err.message || 
-        'Login failed. Please try again.'
-      );
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
-      console.log('=== Login Process Completed ===');
     }
   };
 
@@ -97,14 +40,10 @@ const LoginPage = () => {
       <div className="hidden lg:flex lg:w-1/2 bg-[#1A1A1A] items-center justify-center p-12">
         <div className="space-y-6 text-center">
           <div className="space-y-2">
-            <svg viewBox="0 0 24 24" className="w-16 h-16 mx-auto text-blue-500" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
             <h1 className="text-4xl font-bold tracking-tight text-gray-100">EventSphere</h1>
           </div>
           <p className="text-xl text-gray-400 max-w-sm">
-            Welcome back! Sign in to manage your events.
+            Your gateway to campus events. Connect, participate, and engage.
           </p>
         </div>
       </div>
@@ -113,8 +52,8 @@ const LoginPage = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-100">Sign In</h2>
-            <p className="mt-2 text-gray-400">Welcome back to EventSphere</p>
+            <h2 className="text-3xl font-bold text-gray-100">Welcome Back</h2>
+            <p className="mt-2 text-gray-400">Sign in to your account</p>
           </div>
 
           {error && (
@@ -130,8 +69,6 @@ const LoginPage = () => {
                   Email or Student ID
                 </label>
                 <input
-                  id="identifier"
-                  name="identifier"
                   type="text"
                   required
                   value={formData.identifier}
@@ -146,8 +83,6 @@ const LoginPage = () => {
                   Password
                 </label>
                 <input
-                  id="password"
-                  name="password"
                   type="password"
                   required
                   value={formData.password}
@@ -161,25 +96,27 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className={`w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   <span>Signing in...</span>
                 </>
               ) : (
-                'Sign In'
+                'Sign in'
               )}
             </button>
 
             <p className="text-center text-gray-400">
               Don't have an account?{' '}
               <Link to="/register" className="text-blue-500 hover:text-blue-400 font-medium transition-colors duration-200">
-                Create Account
+                Create one
               </Link>
             </p>
           </form>

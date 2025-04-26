@@ -1,45 +1,44 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { register } from '../../store/authSlice';
-import type { AppDispatch } from '../../store';
+import { authAPI } from '../../services/api';
+import { RegisterCredentials, UserRole } from '../../types';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterCredentials>({
     name: '',
-    identifier: '',
+    email: '',
     studentId: '',
     password: '',
-    role: 'student' as 'student' | 'admin'  // Changed from 'organizer' to 'admin'
+    confirmPassword: '',
+    role: UserRole.STUDENT
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    try {
-      const credentials = {
-        name: formData.name,
-        identifier: formData.identifier,
-        studentId: formData.studentId,
-        password: formData.password,
-        role: formData.role
-      };
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords don't match");
+      setLoading(false);
+      return;
+    }
 
-      console.log('Sending registration data:', credentials);
+    try {
+      const response = await authAPI.register(formData);
+      const user = response.data.user;
       
-      const result = await dispatch(register(credentials)).unwrap();
-      console.log('Registration response:', result);
-      
-      navigate('/login');
+      // Redirect based on user role
+      if (user.role === UserRole.ADMIN) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.response?.data?.message || err.message || 'Registration failed');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -51,10 +50,6 @@ const RegisterPage = () => {
       <div className="hidden lg:flex lg:w-1/2 bg-[#1A1A1A] items-center justify-center p-12">
         <div className="space-y-6 text-center">
           <div className="space-y-2">
-            <svg viewBox="0 0 24 24" className="w-16 h-16 mx-auto text-blue-500" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
             <h1 className="text-4xl font-bold tracking-tight text-gray-100">EventSphere</h1>
           </div>
           <p className="text-xl text-gray-400 max-w-sm">
@@ -95,15 +90,15 @@ const RegisterPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email or Identifier
+                  Email
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  value={formData.identifier}
-                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-                  placeholder="Enter your email or identifier"
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -113,14 +108,14 @@ const RegisterPage = () => {
                 </label>
                 <input
                   type="text"
-                  required={formData.role === 'student'}
+                  required={formData.role === UserRole.STUDENT}
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                   className={`w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500 ${
-                    formData.role === 'admin' ? 'opacity-50 cursor-not-allowed' : ''
+                    formData.role === UserRole.ADMIN ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   placeholder="Enter your student ID"
-                  disabled={formData.role === 'admin'}
+                  disabled={formData.role === UserRole.ADMIN}
                 />
               </div>
 
@@ -141,22 +136,37 @@ const RegisterPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
+                  placeholder="Confirm your password"
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Role
                 </label>
                 <select
                   value={formData.role}
                   onChange={(e) => {
-                    const newRole = e.target.value as 'student' | 'admin';
+                    const newRole = e.target.value as UserRole;
                     setFormData({ 
                       ...formData, 
                       role: newRole,
-                      studentId: newRole === 'admin' ? '' : formData.studentId 
+                      studentId: newRole === UserRole.ADMIN ? '' : formData.studentId 
                     });
                   }}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
-                  <option value="student">Student</option>
-                  <option value="admin">Event Organizer</option>
+                  <option value={UserRole.STUDENT}>Student</option>
+                  <option value={UserRole.ADMIN}>Event Organizer</option>
                 </select>
               </div>
             </div>
@@ -164,11 +174,13 @@ const RegisterPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className={`w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>

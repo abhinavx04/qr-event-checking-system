@@ -1,11 +1,12 @@
 import { Navigate } from 'react-router-dom';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: UserRole[];
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, allowedRoles = [] }: ProtectedRouteProps) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
   
@@ -14,8 +15,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!token || !userStr) {
     console.log('No token or user data, redirecting to login');
-    localStorage.clear(); // Clear any invalid data
-    return <Navigate to="/login" />;
+    localStorage.clear();
+    return <Navigate to="/login" replace />;
   }
 
   try {
@@ -23,14 +24,21 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     if (!user || !user.id) {
       console.log('Invalid user data, redirecting to login');
       localStorage.clear();
-      return <Navigate to="/login" />;
+      return <Navigate to="/login" replace />;
     }
+
     console.log('Valid user found:', user);
+
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role as UserRole)) {
+      console.log('User role not authorized:', user.role);
+      return <Navigate to={user.role === UserRole.ADMIN ? '/admin/dashboard' : '/dashboard'} replace />;
+    }
+
     return <>{children}</>;
   } catch (error) {
     console.error('Error parsing user data:', error);
-    localStorage.clear(); // Clear invalid data
-    return <Navigate to="/login" />;
+    localStorage.clear();
+    return <Navigate to="/login" replace />;
   }
 };
 

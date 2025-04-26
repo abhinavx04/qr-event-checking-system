@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { LoginCredentials, RegisterCredentials } from '../types';
+import { LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -27,36 +27,57 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.clear();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    return Promise.reject(error);
+    return Promise.reject(error.response?.data || error);
   }
 );
 
 export const authAPI = {
-  register: async (credentials: RegisterCredentials) => {
+  register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post('/auth/register', credentials);
+      const response = await api.post<AuthResponse>('/auth/register', credentials);
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
       return response.data;
     } catch (error: any) {
-      console.error('Registration API error:', error.response?.data || error);
-      throw error.response?.data || error;
+      throw error?.message || 'Registration failed';
     }
   },
   
-  login: async (credentials: LoginCredentials) => {
+  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post('/auth/login', credentials);
-      return response;
+      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+      return response.data;
     } catch (error: any) {
-      console.error('Login API error:', error.response?.data || error);
+      throw error?.message || 'Login failed';
+    }
+  },
+  
+  verifyToken: async (): Promise<AuthResponse> => {
+    try {
+      const response = await api.get<AuthResponse>('/auth/verify');
+      return response.data;
+    } catch (error) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       throw error;
     }
   },
-  
-  verifyToken: () => 
-    api.get('/auth/verify'),
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
 };
 
 export default api;

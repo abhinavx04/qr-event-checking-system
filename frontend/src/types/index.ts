@@ -1,14 +1,20 @@
+export enum UserRole {
+  ADMIN = 'admin',
+  STUDENT = 'student'
+}
+
 export interface LoginCredentials {
-  identifier: string;  // This can be either email or studentId
+  identifier: string;  // email or studentId
   password: string;
 }
 
 export interface RegisterCredentials {
   name: string;
-  identifier: string;
-  studentId?: string;
+  email: string;
+  studentId: string;
   password: string;
-  role: string;
+  confirmPassword: string;
+  role: UserRole;
 }
 
 export interface User {
@@ -16,10 +22,27 @@ export interface User {
   name: string;
   email: string;
   studentId: string;
-  role: string;
+  role: UserRole;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  error: string | null;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  token: string;
+  data: {
+    user: User;
+  };
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -48,16 +71,4 @@ export interface DashboardStats {
   upcomingEvents: number;
   completedEvents: number;
   totalAttendance: number;
-}
-
-export enum UserRole {
-  ADMIN = 'admin',
-  STUDENT = 'student'
-}
-export interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  error: string | null;
 }

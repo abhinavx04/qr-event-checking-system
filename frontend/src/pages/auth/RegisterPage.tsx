@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { register } from '../../store/authSlice';
+import type { AppDispatch } from '../../store';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -20,19 +23,17 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', {
+      await dispatch(register({
         name: formData.name,
         email: formData.email,
-        studentId: formData.studentId,
         password: formData.password,
+        studentId: formData.studentId,
         role: formData.role
-      });
+      })).unwrap();
 
-      if (response.data.success) {
-        navigate('/login');
-      }
+      navigate('/login');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -35,11 +35,17 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
+  register: async (credentials: RegisterCredentials) => {
+    try {
+      const response = await api.post('/auth/register', credentials);
+      return response.data;
+    } catch (error: any) {
+      console.error('Registration API error:', error.response?.data || error);
+      throw error.response?.data || error;
+    }
+  },
   login: (credentials: LoginCredentials) => 
     api.post('/auth/login', credentials),
-  
-  register: (credentials: RegisterCredentials) => 
-    api.post('/auth/register', credentials),
   
   verifyToken: () => 
     api.get('/auth/verify'),

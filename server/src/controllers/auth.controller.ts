@@ -110,9 +110,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error: any) {
-    res.status(400).json({
+    console.error('Login error:', error); // Added error logging
+    res.status(500).json({ // Changed to 500 for server errors
       success: false,
-      message: error.message
+      message: 'Error logging in user'
     });
   }
 };

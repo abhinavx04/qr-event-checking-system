@@ -23,17 +23,23 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      await dispatch(register({
+      const credentials = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        studentId: formData.studentId,
+        studentId: formData.role === 'student' ? formData.studentId : undefined,
         role: formData.role
-      })).unwrap();
+      };
 
+      console.log('Sending registration data:', credentials); // Add this for debugging
+      
+      const result = await dispatch(register(credentials)).unwrap();
+      console.log('Registration response:', result); // Add this for debugging
+      
       navigate('/login');
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', err); // Add this for debugging
+      setError(err.response?.data?.message || err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }

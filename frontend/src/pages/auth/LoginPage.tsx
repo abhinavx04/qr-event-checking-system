@@ -1,12 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { login } from '../../store/authSlice';
-import type { AppDispatch } from '../../store';
+import axios from "../utils/axiose"
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
   const [formData, setFormData] = useState({
     identifier: '',
     password: ''
@@ -20,16 +17,18 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const result = await dispatch(login({
+      const response = await axios.post('/auth/login', {
         email: formData.identifier,
         password: formData.password
-      })).unwrap();
+      });
 
-      if (result.token) {
+      if (response.data.success && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

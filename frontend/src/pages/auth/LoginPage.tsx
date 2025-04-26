@@ -2,55 +2,92 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { LoginCredentials } from '../../types';
-console.log()
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginCredentials>({
-    email: '',
+    identifier: '', // This can be email or studentId
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent form submission reload
     setLoading(true);
     setError('');
 
-    console.log('Login attempt with email:', formData.email); // Log login attempt
-
     try {
+      // Pre-request validation
+      if (!formData.identifier || !formData.password) {
+        setError('Please fill in all fields');
+        return;
+      }
+
+      // Pre-request logging
+      console.log('=== Starting Login Process ===');
+      console.log('Form data:', {
+        identifier: formData.identifier,
+        passwordLength: formData.password.length
+      });
+      
+      // Making the API request
+      console.log('Making API request to:', import.meta.env.VITE_API_URL + '/auth/login');
       const response = await authAPI.login({
-        email: formData.email,
+        identifier: formData.identifier,
         password: formData.password
       });
 
-      console.log('Login response:', response); // Log full response
+      // Response logging
+      console.log('=== Response Received ===');
+      console.log('Status:', response.status);
+      console.log('Data:', response.data);
 
-      if (response.data.token) {
-        console.log('Login successful! Token received'); // Log successful token receipt
+      if (!response.data) {
+        throw new Error('No response data received');
+      }
+
+      // Success handling
+      if (response.data.success && response.data.token) {
+        console.log('=== Login Successful ===');
+        
+        // Store token
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        console.log('User data stored:', response.data.user); // Log stored user data
-        navigate('/');
+        console.log('Token stored in localStorage');
+        
+        // Store user data
+        const userData = response.data.data?.user;
+        if (!userData) {
+          throw new Error('No user data received');
+        }
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('User data stored:', userData);
+        
+        // Navigate to dashboard
+        console.log('Redirecting to dashboard...');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 100); // Small delay to ensure console logs are visible
+      } else {
+        throw new Error(response.data.message || 'Login failed');
       }
     } catch (err: any) {
-      console.error('Login error details:', {
-        message: err.response?.data?.message,
+      console.error('=== Login Error ===');
+      console.error('Error details:', {
+        name: err.name,
+        message: err.message,
         status: err.response?.status,
-        error: err
-      }); // Detailed error logging
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+        data: err.response?.data
+      });
+
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Login failed. Please try again.'
+      );
     } finally {
       setLoading(false);
-      console.log('Login process completed'); // Log process completion
+      console.log('=== Login Process Completed ===');
     }
   };
 
@@ -90,17 +127,17 @@ const LoginPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email
+                  Email or Student ID
                 </label>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
                   required
-                  value={formData.email}
-                  onChange={handleChange}
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or student ID"
                 />
               </div>
 
@@ -114,7 +151,7 @@ const LoginPage = () => {
                   type="password"
                   required
                   value={formData.password}
-                  onChange={handleChange}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
                   placeholder="Enter your password"
                 />

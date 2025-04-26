@@ -3,18 +3,7 @@ import bcrypt from 'bcryptjs';
 
 export enum UserRole {
   STUDENT = 'student',
-  ADMIN = 'admin'
-}
-
-interface IUser extends Document {
-  name: string;
-  email: string;
-  studentId: string;
-  password: string;
-  role: UserRole;
-  createdAt: Date;
-  updatedAt: Date;
-  comparePassword(candidatePassword: string): Promise<boolean>;
+  ADMIN = 'admin'  // admin and organizer are the same
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -38,15 +27,12 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     studentId: {
       type: String,
-      required: [true, 'Please provide your student ID'],
+      required: function(this: any) {
+        return this.role === UserRole.STUDENT;
+      },
       unique: true,
+      sparse: true,  // allows null/undefined if not required
       trim: true
-    },
-    password: {
-      type: String,
-      required: [true, 'Please provide a password'],
-      minlength: [6, 'Password must be at least 6 characters long'],
-      select: false // Don't return password by default
     },
     role: {
       type: String,

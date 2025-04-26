@@ -9,10 +9,10 @@ const RegisterPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    identifier: '',
     studentId: '',
     password: '',
-    role: 'student' as 'student' | 'organizer'
+    role: 'student' as 'student' | 'admin'  // Changed from 'organizer' to 'admin'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,20 +25,20 @@ const RegisterPage = () => {
     try {
       const credentials = {
         name: formData.name,
-        email: formData.email,
+        identifier: formData.identifier,
+        studentId: formData.studentId,
         password: formData.password,
-        studentId: formData.role === 'student' ? formData.studentId : undefined,
         role: formData.role
       };
 
-      console.log('Sending registration data:', credentials); // Add this for debugging
+      console.log('Sending registration data:', credentials);
       
       const result = await dispatch(register(credentials)).unwrap();
-      console.log('Registration response:', result); // Add this for debugging
+      console.log('Registration response:', result);
       
       navigate('/login');
     } catch (err: any) {
-      console.error('Registration error:', err); // Add this for debugging
+      console.error('Registration error:', err);
       setError(err.response?.data?.message || err.message || 'Registration failed');
     } finally {
       setLoading(false);
@@ -95,15 +95,15 @@ const RegisterPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email
+                  Email or Identifier
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or identifier"
                 />
               </div>
 
@@ -117,10 +117,10 @@ const RegisterPage = () => {
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                   className={`w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500 ${
-                    formData.role === 'organizer' ? 'opacity-50 cursor-not-allowed' : ''
+                    formData.role === 'admin' ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   placeholder="Enter your student ID"
-                  disabled={formData.role === 'organizer'}
+                  disabled={formData.role === 'admin'}
                 />
               </div>
 
@@ -146,17 +146,17 @@ const RegisterPage = () => {
                 <select
                   value={formData.role}
                   onChange={(e) => {
-                    const newRole = e.target.value as 'student' | 'organizer';
+                    const newRole = e.target.value as 'student' | 'admin';
                     setFormData({ 
                       ...formData, 
                       role: newRole,
-                      studentId: newRole === 'organizer' ? '' : formData.studentId 
+                      studentId: newRole === 'admin' ? '' : formData.studentId 
                     });
                   }}
                   className="w-full px-4 py-3 bg-[#1E1E1E] text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
                   <option value="student">Student</option>
-                  <option value="organizer">Event Organizer</option>
+                  <option value="admin">Event Organizer</option>
                 </select>
               </div>
             </div>

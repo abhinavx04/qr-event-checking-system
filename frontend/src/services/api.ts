@@ -44,8 +44,16 @@ export const authAPI = {
       throw error.response?.data || error;
     }
   },
-  login: (credentials: LoginCredentials) => 
-    api.post('/auth/login', credentials),
+  
+  login: async (credentials: LoginCredentials) => {
+    try {
+      const response = await api.post('/auth/login', credentials);
+      return response;
+    } catch (error: any) {
+      console.error('Login API error:', error.response?.data || error);
+      throw error;
+    }
+  },
   
   verifyToken: () => 
     api.get('/auth/verify'),

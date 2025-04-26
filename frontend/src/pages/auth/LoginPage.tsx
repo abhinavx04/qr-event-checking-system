@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { LoginCredentials } from '../../types';
-
+console.log()
 const LoginPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginCredentials>({
@@ -24,22 +24,33 @@ const LoginPage = () => {
     setLoading(true);
     setError('');
 
+    console.log('Login attempt with email:', formData.email); // Log login attempt
+
     try {
       const response = await authAPI.login({
         email: formData.email,
         password: formData.password
       });
 
+      console.log('Login response:', response); // Log full response
+
       if (response.data.token) {
+        console.log('Login successful! Token received'); // Log successful token receipt
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log('User data stored:', response.data.user); // Log stored user data
         navigate('/');
       }
     } catch (err: any) {
+      console.error('Login error details:', {
+        message: err.response?.data?.message,
+        status: err.response?.status,
+        error: err
+      }); // Detailed error logging
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
-      console.error('Login error:', err);
     } finally {
       setLoading(false);
+      console.log('Login process completed'); // Log process completion
     }
   };
 
